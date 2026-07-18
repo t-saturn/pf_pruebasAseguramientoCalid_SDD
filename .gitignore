@@ -1,0 +1,39 @@
+# Dependencias
+node_modules/
+
+# Compilados
+dist/
+build/
+.next/
+out/
+
+# Variables de entorno (nunca versionar secretos)
+.env
+.env.local
+.env.production
+.env.development
+
+# Cobertura de pruebas
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma - migraciones locales de desarrollo
+# (mantener schema.prisma y migrations/ bajo control de versiones)

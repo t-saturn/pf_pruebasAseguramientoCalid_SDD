@@ -1,0 +1,143 @@
+// Prisma schema for MindFlow — PostgreSQL
+// Requisitos: 7.1, 7.2, 7.3, 7.4, 7.5
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url is configured in prisma.config.ts (Prisma 7 requirement)
+}
+
+// ─── Student ─────────────────────────────────────────────────────────────────
+// Representa al usuario del sistema (estudiante autenticado).
+// Requisito 7.1
+model Student {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  sessions          Session[]
+  fatigueRecords    FatigueRecord[]
+  tasks             Task[]
+  notificationLogs  NotificationLog[]
+
+  @@map("students")
+}
+
+// ─── Session ─────────────────────────────────────────────────────────────────
+// Período de interacción activa entre el estudiante y el EMA_Bot.
+// Requisito 7.2
+model Session {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String    @map("student_id") @db.Uuid
+  startedAt DateTime  @map("started_at") @db.Timestamptz
+  endedAt   DateTime? @map("ended_at") @db.Timestamptz
+  isActive  Boolean   @default(true) @map("is_active")
+
+  // Relations
+  student        Student         @relation(fields: [studentId], references: [id])
+  fatigueRecords FatigueRecord[]
+  microObjectives MicroObjective[]
+
+  @@index([studentId])
+  @@index([isActive])
+  @@map("sessions")
+}
+
+// ─── FatigueRecord ───────────────────────────────────────────────────────────
+// Puntuación de fatiga autoreportada por el estudiante en una sesión.
+// fatigue_score CHECK (1 ≤ value ≤ 5) se aplica en la migración SQL.
+// Requisito 7.3
+model FatigueRecord {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId      String   @map("session_id") @db.Uuid
+  studentId      String   @map("student_id") @db.Uuid
+  fatigueScore   Int      @map("fatigue_score") @db.SmallInt
+  recordedAtUtc  DateTime @default(now()) @map("recorded_at_utc") @db.Timestamptz
+
+  // Relations
+  session  Session @relation(fields: [sessionId], references: [id])
+  student  Student @relation(fields: [studentId], references: [id])
+
+  @@index([sessionId])
+  @@index([studentId])
+  @@map("fatigue_records")
+}
+
+// ─── Task ────────────────────────────────────────────────────────────────────
+// Actividad académica definida por el estudiante.
+// Eliminación lógica mediante is_deleted.
+// Requisito 7.4
+model Task {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?
+  deadline    DateTime @db.Timestamptz
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  student          Student          @relation(fields: [studentId], references: [id])
+  microObjectives  MicroObjective[]
+  notificationLogs NotificationLog[]
+
+  @@index([studentId])
+  @@index([isDeleted])
+  @@index([deadline])
+  @@map("tasks")
+}
+
+// ─── MicroObjective ──────────────────────────────────────────────────────────
+// Unidad de trabajo atómica generada por el Task_Decomposer (fatiga >= 4).
+// estimated_minutes CHECK (0 < value ≤ 25) se aplica en la migración SQL.
+// Requisito 7.4
+model MicroObjective {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId           String   @map("task_id") @db.Uuid
+  sessionId        String   @map("session_id") @db.Uuid
+  content          String
+  estimatedMinutes Int      @map("estimated_minutes") @db.SmallInt
+  isCompleted      Boolean  @default(false) @map("is_completed")
+  isAuditOnly      Boolean  @default(false) @map("is_audit_only")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  task    Task    @relation(fields: [taskId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@index([taskId])
+  @@index([sessionId])
+  @@index([isCompleted])
+  @@map("micro_objectives")
+}
+
+// ─── NotificationLog ─────────────────────────────────────────────────────────
+// Registro de notificaciones enviadas al estudiante por tareas próximas.
+// status CHECK IN ('pending','sent','failed') se aplica en la migración SQL.
+// Requisito 7.5
+model NotificationLog {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  taskId          String   @map("task_id") @db.Uuid
+  status          String   @db.VarChar(20)
+  attemptCount    Int      @default(0) @map("attempt_count") @db.SmallInt
+  dispatchedAtUtc DateTime @map("dispatched_at_utc") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id])
+  task    Task    @relation(fields: [taskId], references: [id])
+
+  @@index([studentId])
+  @@index([taskId])
+  @@index([status])
+  @@map("notification_logs")
+}
