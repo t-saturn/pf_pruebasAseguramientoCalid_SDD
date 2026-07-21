@@ -25,6 +25,7 @@ import {
   type MicroObjective,
 } from './MicroObjectiveItem';
 import type { Task } from './TaskList';
+import { CheckCircle2, Sparkles } from 'lucide-react';
 
 // ─── SWR fetcher (same key as TaskList to share cache) ────────────────────────
 
@@ -59,7 +60,7 @@ export function MicroObjectivesPanel() {
   // Error state
   if (error) {
     return (
-      <Card className="border-destructive">
+      <Card className="border-destructive/40 bg-destructive/5">
         <CardContent className="pt-6">
           <p className="text-sm text-destructive text-center">
             No se pudieron cargar los micro-objetivos.
@@ -80,8 +81,9 @@ export function MicroObjectivesPanel() {
   // Empty state — no pending micro-objectives
   if (tasksWithPendingMOs.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-dashed bg-gradient-to-br from-emerald-500/10 to-transparent">
         <CardContent className="pt-6 pb-6 text-center">
+          <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-500" />
           <p className="text-sm text-muted-foreground">
             No hay micro-objetivos pendientes. ¡Buen trabajo!
           </p>
@@ -93,9 +95,11 @@ export function MicroObjectivesPanel() {
   return (
     <div className="flex flex-col gap-4">
       {tasksWithPendingMOs.map((task) => (
-        <Card key={task.id}>
+        <Card key={task.id} className="overflow-hidden border-emerald-500/15 bg-card/90 shadow-sm transition-all hover:border-emerald-500/30 hover:shadow-md">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold line-clamp-1">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold line-clamp-1">
+              <Sparkles className="h-4 w-4 shrink-0 text-emerald-500" />
               {task.name}
             </CardTitle>
           </CardHeader>
