@@ -22,6 +22,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TaskDecomposerService, MicroObjective } from '../task-decomposer/task-decomposer.service';
+import { Task } from '@prisma/client';
 
 /** Respuesta del método startSession. */
 export interface StartSessionResponse {
@@ -38,6 +39,9 @@ export interface SubmitFatigueResponse {
   message: string;
   /** Micro-objetivos generados si fatigueScore >= 4; vacío en caso contrario. */
   microObjectives: MicroObjective[];
+  /** Tarea original para fatiga baja o como fallback si falla la IA. */
+  task: Task | null;
+  decompositionFailed: boolean;
 }
 
 /** Forma simplificada de Session retornada en el historial. */
@@ -67,10 +71,16 @@ export class SessionService {
    * Requisito 3.1
    */
   async startSession(studentId: string): Promise<StartSessionResponse> {
+    const now = new Date();
+    await this.prisma.session.updateMany({
+      where: { studentId, isActive: true },
+      data: { isActive: false, endedAt: now },
+    });
+
     const session = await this.prisma.session.create({
       data: {
         studentId,
-        startedAt: new Date(),
+        startedAt: now,
         isActive: true,
       },
     });
@@ -101,6 +111,7 @@ export class SessionService {
     sessionId: string,
     studentId: string,
     score: number,
+    taskId?: string,
   ): Promise<SubmitFatigueResponse> {
     // Verificar que la Session existe y pertenece al Student autenticado
     const session = await this.prisma.session.findUnique({
@@ -114,6 +125,24 @@ export class SessionService {
     if (session.studentId !== studentId) {
       throw new BadRequestException(
         'La sesión no pertenece al estudiante autenticado.',
+      );
+    }
+
+    if (!session.isActive) {
+      throw new BadRequestException('La sesión EMA ya fue completada.');
+    }
+
+    const activeTasks = await this.prisma.task.findMany({
+      where: { studentId, isDeleted: false },
+      orderBy: { deadline: 'asc' },
+    });
+    const selectedTask = taskId
+      ? activeTasks.find((task) => task.id === taskId)
+      : activeTasks[0];
+
+    if (taskId && !selectedTask) {
+      throw new BadRequestException(
+        'La tarea seleccionada no existe o no pertenece al estudiante.',
       );
     }
 
@@ -140,42 +169,36 @@ export class SessionService {
 
     // ── Descomposición adaptativa por fatiga — Requisitos 4.1, 4.2 ──────────
     let microObjectives: MicroObjective[] = [];
+    let decompositionFailed = false;
 
-    if (this.taskDecomposer.shouldDecompose(score)) {
-      // Obtener tareas activas del Student para descomponer
-      const activeTasks = await this.prisma.task.findMany({
-        where: { studentId, isDeleted: false },
-        orderBy: { deadline: 'asc' },
-      });
-
-      if (activeTasks.length > 0) {
-        // Descomponer cada tarea activa (en paralelo para minimizar latencia)
-        const results = await Promise.allSettled(
-          activeTasks.map((task) =>
-            this.taskDecomposer.decompose(
-              { id: task.id, name: task.name, description: task.description },
-              sessionId,
-            ),
-          ),
+    if (this.taskDecomposer.shouldDecompose(score) && selectedTask) {
+      try {
+        microObjectives = await this.taskDecomposer.decompose(
+          {
+            id: selectedTask.id,
+            name: selectedTask.name,
+            description: selectedTask.description,
+          },
+          sessionId,
         );
-
-        for (const result of results) {
-          if (result.status === 'fulfilled') {
-            microObjectives = microObjectives.concat(result.value);
-          } else {
-            // Log el fallo individual pero no bloquea otras tareas — Requisito 4.5
-            this.logger.error(
-              `Error al descomponer tarea: ${(result.reason as Error).message}`,
-            );
-          }
-        }
+      } catch (error) {
+        decompositionFailed = true;
+        this.logger.error(
+          `Error al descomponer tarea: ${(error as Error).message}`,
+        );
       }
     }
     // ─────────────────────────────────────────────────────────────────────────
 
     // Determinar mensaje según si hubo descomposición o no — Requisito 3.4
-    const message =
-      microObjectives.length > 0
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { isActive: false, endedAt: new Date() },
+    });
+
+    const message = decompositionFailed
+      ? 'Puntuación registrada. No fue posible usar la IA; se muestra la tarea original.'
+      : microObjectives.length > 0
         ? `Fatigue score registrado. Se generaron ${microObjectives.length} micro-objetivo(s) para tus tareas activas.`
         : 'Fatigue score registrado. Transicionando al flujo de interacción de tareas.';
 
@@ -186,6 +209,8 @@ export class SessionService {
       recordedAtUtc: fatigueRecord.recordedAtUtc,
       message,
       microObjectives,
+      task: microObjectives.length === 0 ? (selectedTask ?? null) : null,
+      decompositionFailed,
     };
   }
 

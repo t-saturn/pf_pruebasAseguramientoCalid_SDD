@@ -110,7 +110,8 @@ export class TaskDecomposerService {
    * no tiene el formato esperado. — Requisito 4.5
    */
   private async callLlm(task: Task): Promise<LlmMicroObjective[]> {
-    const aiUrl = this.config.get<string>('AI_SERVICE_URL');
+    const aiUrl =
+      this.config.get<string>('AI_SERVICE_URL') ?? 'https://api.openai.com/v1';
     const apiKey = this.config.get<string>('AI_SERVICE_API_KEY');
 
     if (!aiUrl || !apiKey) {

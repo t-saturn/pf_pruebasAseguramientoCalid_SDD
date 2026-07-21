@@ -27,12 +27,14 @@ function createMockPrisma() {
       create: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     fatigueRecord: {
       create: jest.fn(),
     },
     task: {
-      findMany: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
 }
@@ -89,6 +91,10 @@ describe('SessionService — startSession', () => {
     expect(result.sessionId).toBe(fakeSessionId);
     expect(result.prompt).toBe('¿Cómo te sientes hoy? (1-5)');
     expect(mockPrisma.session.create).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.session.updateMany).toHaveBeenCalledWith({
+      where: { studentId: 'student-uuid-001', isActive: true },
+      data: { isActive: false, endedAt: expect.any(Date) },
+    });
     expect(mockPrisma.session.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         studentId: 'student-uuid-001',
@@ -238,6 +244,12 @@ describe('SessionService — submitFatigueScore (transición al flujo de tareas)
     expect(result.score).toBe(score);
     expect(result.message).toContain('Transicionando al flujo de interacción de tareas');
     expect(result.microObjectives).toEqual([]);
+    expect(result.task).toBeNull();
+    expect(result.decompositionFailed).toBe(false);
+    expect(mockPrisma.session.update).toHaveBeenCalledWith({
+      where: { id: sessionId },
+      data: { isActive: false, endedAt: expect.any(Date) },
+    });
 
     // La persistencia fue invocada exactamente una vez
     expect(mockPrisma.fatigueRecord.create).toHaveBeenCalledTimes(1);
