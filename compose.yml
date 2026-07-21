@@ -1,8 +1,6 @@
 services:
   db:
     image: postgres:18-alpine
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -21,9 +19,8 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-    env_file:
-      - .env
     environment:
+      NODE_ENV: ${NODE_ENV:-development}
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       AI_SERVICE_API_KEY: ${AI_SERVICE_API_KEY}
@@ -34,8 +31,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Health-check retry logic is handled in the NestJS bootstrap (5 retries, 5s interval)
-    # — Requisito 8.5
 
   frontend:
     build:
@@ -45,7 +40,9 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     environment:
+      NODE_ENV: ${NODE_ENV:-development}
       AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_DEBUG: ${AUTH_DEBUG:-false}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:3001/api/v1}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     ports:
