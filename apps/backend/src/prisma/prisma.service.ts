@@ -22,7 +22,12 @@ export class PrismaService
     // Prisma 7: connection URL is read from DATABASE_URL env variable directly.
     // Pool configuration (min: 2, max: 10) is controlled via DATABASE_URL params:
     //   ?connection_limit=10&pool_timeout=20  — Requisito 7.5
-    process.env.DATABASE_URL ??= 'postgresql://mindflow_user:your_postgres_password@db:5432/mindflow';
+    if (!process.env.DATABASE_URL) {
+      throw new Error(
+        'DATABASE_URL no está definida. Configúrala en .env o ../../.env.',
+      );
+    }
+
     const adapter = new PrismaPg({
       connectionString: process.env.DATABASE_URL,
     });

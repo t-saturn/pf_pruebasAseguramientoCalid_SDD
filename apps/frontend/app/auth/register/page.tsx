@@ -38,7 +38,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { apiFetch, setToken } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { signIn } from 'next-auth/react';
 
 // ─── Esquema de validación ──────────────────────────────────────────────────
 
@@ -61,10 +62,6 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 interface RegisterResponse {
   message: string;
-}
-
-interface LoginResponse {
-  token: string;
 }
 
 // ─── Componente ──────────────────────────────────────────────────────────────
@@ -98,23 +95,16 @@ export default function RegisterPage() {
       });
 
       // 2. Hacer login automático con las mismas credenciales
-      const loginData = await apiFetch<LoginResponse>('/auth/login', {
-        method: 'POST',
-        body: {
-          email: values.email,
-          password: values.password,
-        },
+      const result = await signIn('credentials', {
+        email: values.email,
+        password: values.password,
+        redirect: false,
       });
 
-      // 3. Guardar JWT en localStorage y en cookie HttpOnly
-      setToken(loginData.token);
-      await fetch('/api/auth/set-cookie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: loginData.token }),
-      });
+      if (result?.error) throw new Error(result.error);
 
-      router.push('/dashboard');
+      router.replace('/dashboard');
+      router.refresh();
     } catch (error: unknown) {
       if (error instanceof Error) {
         // HTTP 409 → email ya registrado → error justo debajo del campo email

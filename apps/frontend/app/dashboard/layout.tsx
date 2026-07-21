@@ -4,38 +4,22 @@
  * Layout del Dashboard.
  *
  * Incluye un header con el nombre de la aplicación y un botón de logout.
- * El logout elimina el JWT de localStorage y la cookie HttpOnly,
- * luego redirige a la página de login.
+ * El logout invalida la sesión de Auth.js y redirige al login.
  *
  * Requisitos: 5.1, 5.5
  */
 
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { removeToken } from '@/lib/api';
 import { ThemeToggleWrapper } from '@/components/wrappers';
+import { signOut } from 'next-auth/react';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-
   async function handleLogout() {
-    // Remove JWT from localStorage
-    removeToken();
-
-    // Clear HttpOnly cookie via dedicated logout route
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'DELETE',
-      });
-    } catch {
-      // Proceed with redirect even if cookie deletion fails
-    }
-
-    router.push('/auth/login');
+    await signOut({ callbackUrl: '/auth/login' });
   }
 
   return (

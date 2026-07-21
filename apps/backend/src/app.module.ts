@@ -21,7 +21,9 @@ import { TaskDecomposerModule } from './task-decomposer/task-decomposer.module';
     // Carga variables de entorno desde .env — Requisito 8.4
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      // Permite ejecutar desde apps/backend y también usar un .env local.
+      // Las variables ya presentes en el entorno (Docker/CI) tienen prioridad.
+      envFilePath: ['.env', '../../.env'],
     }),
     // Activa el scheduler de cron jobs — Requisito 6.1
     ScheduleModule.forRoot(),
