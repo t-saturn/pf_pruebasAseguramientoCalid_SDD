@@ -15,6 +15,8 @@ import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { apiFetch } from '@/lib/api';
 import { SlotTextWrapper } from '@/components/wrappers';
+import { Clock3 } from 'lucide-react';
+import { sileo } from 'sileo';
 
 export interface MicroObjective {
   id: string;
@@ -56,16 +58,26 @@ export function MicroObjectiveItem({
         },
       );
       onToggle?.(microObjective.id, checked);
+      sileo.success({
+        title: checked ? 'Micro-objetivo completado' : 'Micro-objetivo reabierto',
+        description: checked
+          ? 'Tu progreso se guardó correctamente.'
+          : 'El paso volvió a tu lista de pendientes.',
+      });
     } catch {
       // Revert on failure
       setIsCompleted(!checked);
+      sileo.error({
+        title: 'No se pudo guardar el cambio',
+        description: 'Revisa la conexión e inténtalo nuevamente.',
+      });
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="flex items-start gap-3 py-2">
+    <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/70">
       <Checkbox
         id={`mo-${microObjective.id}`}
         checked={isCompleted}
@@ -90,7 +102,8 @@ export function MicroObjectiveItem({
         <SlotTextWrapper text={microObjective.content} />
         {microObjective.estimatedMinutes > 0 && (
           <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
-            ~{microObjective.estimatedMinutes} min
+            <Clock3 className="mr-1 inline h-3 w-3" aria-hidden="true" />
+            {microObjective.estimatedMinutes} min
           </span>
         )}
       </label>

@@ -31,6 +31,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import { EmptyState } from './EmptyState';
+import { AlertCircle, BrainCircuit } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -136,9 +137,10 @@ export function FatigueHistoryChart() {
   // Error state
   if (error) {
     return (
-      <Card className="border-destructive">
+      <Card className="border-destructive/40 bg-destructive/5">
         <CardContent className="pt-6">
-          <p className="text-sm text-destructive text-center">
+          <p className="flex items-center justify-center gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" />
             No se pudo cargar el historial de fatiga.
           </p>
         </CardContent>
@@ -162,9 +164,10 @@ export function FatigueHistoryChart() {
   const chartData = toChartData(fatigueHistory);
 
   return (
-    <Card>
+    <Card className="overflow-hidden border-cyan-500/15 bg-card/90 shadow-sm">
+      <div className="h-1 bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-500" />
       <CardHeader>
-        <CardTitle className="text-base">Historial de fatiga</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base"><BrainCircuit className="h-5 w-5 text-cyan-500" /> Historial de fatiga</CardTitle>
         <CardDescription className="text-xs">
           Últimas {fatigueHistory.length} sesiones EMA
         </CardDescription>
@@ -195,9 +198,9 @@ export function FatigueHistoryChart() {
             <Line
               type="monotone"
               dataKey="score"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              dot={{ r: 3, fill: 'hsl(var(--primary))' }}
+              stroke="#8b5cf6"
+              strokeWidth={3}
+              dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: 'hsl(var(--card))' }}
               activeDot={{ r: 5 }}
               name="Fatiga"
             />

@@ -28,6 +28,7 @@ import {
   type MicroObjective,
 } from './MicroObjectiveItem';
 import { DrawerWrapper } from '@/components/wrappers';
+import { AlertCircle, CalendarDays, ChevronRight, ListTodo } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -99,9 +100,10 @@ export function TaskList() {
   // Error state
   if (error) {
     return (
-      <Card className="border-destructive">
+      <Card className="border-destructive/40 bg-destructive/5">
         <CardContent className="pt-6">
-          <p className="text-sm text-destructive text-center">
+          <p className="flex items-center justify-center gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" />
             No se pudieron cargar las tareas. Intenta recargar la página.
           </p>
         </CardContent>
@@ -112,8 +114,9 @@ export function TaskList() {
   // Empty state
   if (!tasks || tasks.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-dashed bg-gradient-to-br from-violet-500/5 to-transparent">
         <CardContent className="pt-6 pb-6 text-center">
+          <ListTodo className="mx-auto mb-3 h-8 w-8 text-violet-500" />
           <p className="text-sm text-muted-foreground">
             No tienes tareas activas. ¡Crea tu primera tarea!
           </p>
@@ -131,13 +134,15 @@ export function TaskList() {
         const badgeVariant = getDeadlineBadgeVariant(task.deadline);
 
         return (
-          <Card key={task.id} className="transition-shadow duration-150 hover:shadow-md">
+          <Card key={task.id} className="overflow-hidden border-primary/10 bg-card/90 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lg">
+            <div className="h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400" />
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between gap-2 flex-wrap">
                 <CardTitle className="text-base font-semibold leading-snug">
                   {task.name}
                 </CardTitle>
-                <Badge variant={badgeVariant} className="shrink-0 text-xs">
+                <Badge variant={badgeVariant} className="shrink-0 gap-1 text-xs">
+                  <CalendarDays className="h-3 w-3" />
                   {formatDeadline(task.deadline)}
                 </Badge>
               </div>
@@ -165,8 +170,8 @@ export function TaskList() {
             <CardContent className="pt-0 pb-3">
               <DrawerWrapper
                 trigger={
-                  <Button variant="ghost" size="sm" className="text-xs px-0 h-auto text-muted-foreground hover:text-foreground">
-                    Ver detalles
+                  <Button variant="ghost" size="sm" className="group/btn h-8 px-2 text-xs text-primary hover:bg-primary/10 hover:text-primary">
+                    Ver detalles <ChevronRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
                   </Button>
                 }
                 title={task.name}
@@ -177,8 +182,8 @@ export function TaskList() {
                   ) : (
                     <p className="text-muted-foreground italic">Sin descripción.</p>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    📅 Fecha límite: {formatDeadline(task.deadline)}
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5" /> Fecha límite: {formatDeadline(task.deadline)}
                   </p>
                   {task.microObjectives && task.microObjectives.length > 0 && (
                     <div>
