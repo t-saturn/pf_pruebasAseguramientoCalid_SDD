@@ -55,7 +55,7 @@ npm run dev --workspace @mindflow/frontend
 
 ## Desarrollo local con Docker
 
-El archivo `docker-compose.yml` es únicamente para desarrollo local y levanta PostgreSQL 18 Alpine, backend y frontend:
+El archivo `compose.yml` es únicamente para desarrollo local y levanta PostgreSQL 18 Alpine, backend y frontend:
 
 ```bash
 docker compose config
@@ -88,7 +88,7 @@ docker build -f apps/frontend/Dockerfile -t mindflow-frontend \
 
 ## Despliegue recomendado
 
-Una opción simple es Vercel para el frontend, Render o Railway para el backend y Neon, Supabase o PostgreSQL administrado del mismo proveedor para la base de datos. Los tres componentes se despliegan por separado; `docker-compose.yml` no se usa en producción.
+Una opción simple es Vercel para el frontend, Render o Railway para el backend y Neon, Supabase o PostgreSQL administrado del mismo proveedor para la base de datos. Los tres componentes se despliegan por separado; `compose.yml` no se usa en producción.
 
 ### Base de datos
 

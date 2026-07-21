@@ -1,6 +1,6 @@
 /**
  * Smoke tests for Docker configuration files.
- * Validates docker-compose.yml statically to ensure:
+ * Validates compose.yml statically to ensure:
  *  - Required services are defined
  *  - No secrets are hardcoded
  *  - Persistent volume is declared
@@ -14,7 +14,7 @@ describe('Docker Configuration Smoke Tests', () => {
   // Resolve from __tests__/ → src/ → backend/ → apps/ → root
   const rootDir = path.resolve(__dirname, '../../../..');
   const composeContent = fs.readFileSync(
-    path.join(rootDir, 'docker-compose.yml'),
+    path.join(rootDir, 'compose.yml'),
     'utf-8',
   );
 
