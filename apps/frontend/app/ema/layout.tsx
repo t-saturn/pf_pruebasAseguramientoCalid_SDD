@@ -10,27 +10,16 @@
  * Requisitos: 3.1, 3.2, 3.4
  */
 
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { removeToken } from '@/lib/api';
+import { signOut } from 'next-auth/react';
 
 export default function EmaLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-
   async function handleLogout() {
-    removeToken();
-
-    try {
-      await fetch('/api/auth/logout', { method: 'DELETE' });
-    } catch {
-      // Proceed with redirect even if cookie deletion fails
-    }
-
-    router.push('/auth/login');
+    await signOut({ callbackUrl: '/auth/login' });
   }
 
   return (

@@ -18,36 +18,6 @@ const API_BASE_URL =
     ? '/api/v1'
     : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1');
 
-/** Clave bajo la cual se almacena el JWT en localStorage. */
-const JWT_STORAGE_KEY = 'mindflow_token';
-
-/**
- * Recupera el JWT almacenado en localStorage.
- * Devuelve null si no existe o si se ejecuta en el servidor (SSR).
- */
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(JWT_STORAGE_KEY);
-}
-
-/**
- * Almacena el JWT en localStorage.
- */
-export function setToken(token: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(JWT_STORAGE_KEY, token);
-  }
-}
-
-/**
- * Elimina el JWT de localStorage (logout).
- */
-export function removeToken(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(JWT_STORAGE_KEY);
-  }
-}
-
 /** Opciones adicionales para apiFetch. */
 export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   /** Body de la petición (se serializa automáticamente a JSON). */
@@ -78,7 +48,11 @@ export async function apiFetch<T = unknown>(
   };
 
   // Adjuntar JWT si está disponible — Requisito 1.5
-  const token = getToken();
+  let token: string | undefined;
+  if (typeof window !== 'undefined') {
+    const { getSession } = await import('next-auth/react');
+    token = (await getSession())?.accessToken;
+  }
   if (token) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }

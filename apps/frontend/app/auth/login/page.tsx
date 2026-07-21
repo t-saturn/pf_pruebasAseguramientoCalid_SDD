@@ -10,10 +10,7 @@
  * Manejo de errores:
  *  - HTTP 401 → mensaje genérico sin revelar si el email o la contraseña son incorrectos
  *
- * Tras el login exitoso:
- *  1. Guarda el JWT en localStorage (para peticiones fetch del lado cliente).
- *  2. Persiste el JWT en una cookie HttpOnly vía /api/auth/set-cookie (para SSR/middleware).
- *  3. Redirige al dashboard.
+ * Auth.js conserva la sesión en una cookie cifrada y redirige al dashboard.
  *
  * Requisitos: 1.3, 1.4
  */
@@ -43,7 +40,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { apiFetch, setToken } from '@/lib/api';
+import { signIn } from 'next-auth/react';
 
 // ─── Esquema de validación ──────────────────────────────────────────────────
 
@@ -55,10 +52,6 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 // ─── Tipos de respuesta de la API ────────────────────────────────────────────
-
-interface AuthResponse {
-  token: string;
-}
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
@@ -80,23 +73,21 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const data = await apiFetch<AuthResponse>('/auth/login', {
-        method: 'POST',
-        body: {
-          email: values.email,
-          password: values.password,
-        },
+      const result = await signIn('credentials', {
+        email: values.email,
+        password: values.password,
+        redirect: false,
       });
 
-      // Guardar JWT en localStorage (cliente) y en cookie HttpOnly (servidor)
-      setToken(data.token);
-      await fetch('/api/auth/set-cookie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: data.token }),
-      });
+      if (result?.error) throw new Error(result.error);
 
-      router.push('/dashboard');
+      const callbackUrl = new URLSearchParams(window.location.search).get(
+        'callbackUrl',
+      );
+      router.replace(
+        callbackUrl?.startsWith('/') ? callbackUrl : '/dashboard',
+      );
+      router.refresh();
     } catch (error: unknown) {
       // HTTP 401 → credenciales incorrectas.
       // Se muestra un mensaje genérico para no revelar si el email existe o no.
