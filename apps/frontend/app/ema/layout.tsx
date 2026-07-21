@@ -12,6 +12,8 @@
 
 import { Button } from '@/components/ui/button';
 import { signOut } from 'next-auth/react';
+import Link from 'next/link';
+import { Sparkles } from 'lucide-react';
 
 export default function EmaLayout({
   children,
@@ -27,24 +29,14 @@ export default function EmaLayout({
       {/* Header */}
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-primary"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
-              />
-            </svg>
+          <Link
+            href="/"
+            aria-label="Ir a la página principal"
+            className="flex items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
             <span className="text-base font-semibold tracking-tight">MindFlow — EMA</span>
-          </div>
+          </Link>
 
           <Button
             variant="outline"

@@ -84,7 +84,12 @@ export class SessionController {
     @Req() req: AuthenticatedRequest,
   ): Promise<SubmitFatigueResponse> {
     const { studentId } = req.user;
-    return this.sessionService.submitFatigueScore(sessionId, studentId, dto.score);
+    return this.sessionService.submitFatigueScore(
+      sessionId,
+      studentId,
+      dto.score,
+      dto.taskId,
+    );
   }
 
   /**

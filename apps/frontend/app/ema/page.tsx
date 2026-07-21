@@ -20,7 +20,9 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { z } from 'zod';
+import { ArrowRight, CalendarDays, Clock3, RefreshCw } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,19 +56,24 @@ type MessageRole = 'bot' | 'user';
 
 interface MicroObjective {
   id: string;
+  taskId?: string;
   content: string;
   estimatedMinutes: number;
+}
+
+interface Task {
+  id: string;
+  name: string;
+  description?: string | null;
+  deadline: string;
 }
 
 interface FatigueResponse {
   score: number;
   microObjectives?: MicroObjective[];
-  task?: {
-    id: string;
-    name: string;
-    description?: string;
-    deadline: string;
-  };
+  task?: Task | null;
+  message?: string;
+  decompositionFailed?: boolean;
 }
 
 interface ChatMessage {
@@ -98,6 +105,8 @@ export default function EmaPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [chatFinished, setChatFinished] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState('');
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -109,18 +118,23 @@ export default function EmaPage() {
 
     async function startSession() {
       try {
-        const data = await apiFetch<{ id: string }>('/sessions', {
-          method: 'POST',
-        });
+        const [session, activeTasks] = await Promise.all([
+          apiFetch<{ sessionId: string; prompt: string }>('/sessions', {
+            method: 'POST',
+          }),
+          apiFetch<Task[]>('/tasks'),
+        ]);
 
         if (cancelled) return;
 
-        setSessionId(data.id);
+        setSessionId(session.sessionId);
+        setTasks(activeTasks);
+        setSelectedTaskId(activeTasks[0]?.id ?? '');
         setMessages([
           {
             id: uid(),
             role: 'bot',
-            text: '¡Hola! Soy EMA, tu asistente de bienestar cognitivo. ¿Cómo te sientes hoy? Ingresa un número del 1 (muy descansado/a) al 5 (muy fatigado/a).',
+            text: `¡Hola! Soy EMA, tu asistente de bienestar cognitivo. ${session.prompt} Usa 1 para muy descansado/a y 5 para muy fatigado/a.`,
           },
         ]);
       } catch {
@@ -178,7 +192,10 @@ export default function EmaPage() {
         `/sessions/${sessionId}/fatigue`,
         {
           method: 'POST',
-          body: { score },
+          body: {
+            score,
+            ...(selectedTaskId && { taskId: selectedTaskId }),
+          },
         },
       );
 
@@ -189,7 +206,7 @@ export default function EmaPage() {
           {
             id: uid(),
             role: 'bot',
-            text: 'Entiendo que estás algo fatigado/a. Aquí tienes tus micro-objetivos para avanzar paso a paso:',
+            text: 'Gracias por contármelo. Para reducir la carga cognitiva, dividí tu tarea en pasos breves y accionables:',
           },
           {
             id: uid(),
@@ -205,7 +222,9 @@ export default function EmaPage() {
           {
             id: uid(),
             role: 'bot',
-            text: '¡Estás en buena forma! Aquí está tu tarea:',
+            text: data.decompositionFailed
+              ? 'Tu puntuación quedó registrada. La IA no estuvo disponible, así que te muestro la tarea original para que puedas continuar.'
+              : 'Tu puntuación quedó registrada. Puedes trabajar con la tarea en su forma original:',
           },
           {
             id: uid(),
@@ -241,7 +260,7 @@ export default function EmaPage() {
           },
         ]);
       } else {
-        // 502 or other error → show original task fallback
+        const fallbackTask = tasks.find((task) => task.id === selectedTaskId);
         setMessages((prev) => [
           ...prev,
           {
@@ -249,6 +268,9 @@ export default function EmaPage() {
             role: 'bot',
             text: 'Hubo un problema al procesar tu respuesta. Mostrando tu tarea original como alternativa.',
           },
+          ...(fallbackTask
+            ? [{ id: uid(), role: 'bot' as const, task: fallbackTask }]
+            : []),
         ]);
         setChatFinished(true);
       }
@@ -323,6 +345,33 @@ export default function EmaPage() {
 
         {/* Input area */}
         <div className="flex flex-col gap-1.5 px-4 py-3">
+          {!chatFinished && tasks.length > 0 && (
+            <div className="mb-2 space-y-1.5">
+              <label htmlFor="ema-task" className="text-sm font-medium">
+                Tarea que quieres abordar
+              </label>
+              <select
+                id="ema-task"
+                value={selectedTaskId}
+                onChange={(event) => setSelectedTaskId(event.target.value)}
+                disabled={isLoading}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {tasks.map((task) => (
+                  <option key={task.id} value={task.id}>
+                    {task.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {!chatFinished && tasks.length === 0 && (
+            <p className="mb-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              No tienes tareas activas. Aun así puedes registrar tu nivel de fatiga.
+            </p>
+          )}
+
           <div className="flex gap-2">
             <Input
               id="ema-score-input"
@@ -363,9 +412,21 @@ export default function EmaPage() {
           )}
 
           {chatFinished && (
-            <p className="text-xs text-muted-foreground">
-              Sesión completada. Puedes cerrar esta ventana o ir al dashboard.
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button asChild size="sm">
+                <Link href="/dashboard">
+                  Ver dashboard <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw className="mr-1 h-4 w-4" /> Nueva evaluación
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -390,7 +451,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
               <p className="text-xs text-muted-foreground">
-                ⏱ Estimado: {mo.estimatedMinutes} min
+                <Clock3 className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                Estimado: {mo.estimatedMinutes} min
               </p>
             </CardContent>
           </Card>
@@ -413,7 +475,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               <p className="text-sm text-muted-foreground">{task.description}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              📅 Fecha límite:{' '}
+              <CalendarDays className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+              Fecha límite:{' '}
               {new Date(task.deadline).toLocaleDateString('es', {
                 year: 'numeric',
                 month: 'short',

@@ -10,10 +10,14 @@
  *
  * Requisitos: 3.2, 3.3
  */
-import { IsInt, Min, Max } from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FatigueSubmitDto {
+  @IsOptional()
+  @IsUUID('4', { message: 'La tarea seleccionada no es válida.' })
+  taskId?: string;
+
   /**
    * Puntuación de fatiga autoreportada por el estudiante.
    * Debe ser un entero en el rango [1, 5].
